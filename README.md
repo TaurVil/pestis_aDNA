@@ -47,6 +47,7 @@ sbatch --array=1-1003%225 --mem=8G --account=pi-lbarreiro --partition=lbarreiro 
 bedtools bamtobed -i exons/LM16_ExonFinal_2018-0307.min24.MQ30.merged.RG.bam  | cut -f 4 > $name.
 ```
 
+# Get genotype calls
 Now we need to call genotypes for each dataset, starting with the gVCF files then assembling the combined call sets. 
 ```console
 mkdir gVCF
@@ -67,4 +68,73 @@ sbatch --array=1-22 --mem=16G run.03.merge_combine_immune.sh
 
 ```
 
-# 
+# Filter genotype calls for target regions
+```
+module load bcftools
+bcftools concat chr*neutral.vcf.gz -a > neutral.vcf.gz
+bcftools concat chr*exon.vcf.gz -a > exon.vcf.gz
+bcftools concat chr*immune.vcf.gz -a > immune.vcf.gz
+vcftools --gzvcf neutral.vcf.gz --mac 3 --max-alleles 2 --bed ./neutral.bed --minQ 30 --recode --out neutral_mac3_biallelic
+vcftools --gzvcf exon.vcf.gz --mac 3 --max-alleles 2 --bed ./exon.bed --minQ 30 --recode --out exon_mac3_biallelic
+vcftools --gzvcf immune.vcf.gz --mac 3 --max-alleles 2 --bed ./immune.bed --minQ 30 --recode --out immune_mac3_biallelic
+
+sed -i 's/_Immune//g' immune_mac3_biallelic.recode.vcf
+sed -i 's/_Exon//g' exon_mac3_biallelic.recode.vcf
+sed -i 's/_Neutral//g' neutral_mac3_biallelic.recode.vcf
+
+bcftools annotate -x ^INFO/DP,^FORMAT/GT,^FORMAT/AD,^FORMAT/DP,^FORMAT/GQ,^FORMAT/PL immune_mac3_biallelic.recode.vcf | bcftools +setGT -- -ta -nu > joint.immune.forgenolik.vcf
+bcftools annotate -x ^INFO/DP,^FORMAT/GT,^FORMAT/AD,^FORMAT/DP,^FORMAT/GQ,^FORMAT/PL exon_mac3_biallelic.recode.vcf | bcftools +setGT -- -ta -nu > joint.exon.forgenolik.vcf
+bcftools annotate -x ^INFO/DP,^FORMAT/GT,^FORMAT/AD,^FORMAT/DP,^FORMAT/GQ,^FORMAT/PL neutral_mac3_biallelic.recode.vcf | bcftools +setGT -- -ta -nu > joint.neutral.forgenolik.vcf
+```
+
+# Get genotype likelihoods for each subset
+```
+module load vcftools
+## Exons
+vcftools --vcf joint.exon.forgenolik.vcf --keep 05.pre_exon_london.txt --recode --out temp; vcftools --vcf temp.recode.vcf --012 --out london_pre_exons
+sed '/^#/d' temp.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | /project2/lbarreiro/users/tauras/Programs/LCLAE/filtbaboon1b 38 > genolik.exons_london_pre.genolik
+vcftools --vcf joint.exon.forgenolik.vcf --keep 05.post_exon_london.txt --recode --out temp; vcftools --vcf temp.recode.vcf --012 --out london_post_exons
+sed '/^#/d' temp.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | /project2/lbarreiro/users/tauras/Programs/LCLAE/filtbaboon1b 63 > genolik.exons_london_post.genolik
+vcftools --vcf joint.exon.forgenolik.vcf --keep 05.BD_exon_london.txt --recode --out temp; vcftools --vcf temp.recode.vcf --012 --out london_during_exons
+sed '/^#/d' temp.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | /project2/lbarreiro/users/tauras/Programs/LCLAE/filtbaboon1b 41 > genolik.exons_london_during.genolik
+
+	vcftools --vcf joint.exon.forgenolik.vcf --keep 05.pre_exon_denmark.txt --recode --out temp2; vcftools --vcf temp2.recode.vcf --012 --out denmark_pre_exons; sed '/^#/d' temp2.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | ../../Programs/LCLAE/filtbaboon1b 42 > genolik.exons_denmark_pre.genolik
+	vcftools --vcf joint.exon.forgenolik.vcf --keep 05.post_exon_denmark.txt --recode --out temp2; vcftools --vcf temp2.recode.vcf --012 --out denmark_post_exons
+	sed '/^#/d' temp2.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | ../../Programs/LCLAE/filtbaboon1b 58 > genolik.exons_denmark_post.genolik
+	vcftools --vcf joint.exon.forgenolik.vcf --keep 05.BD_exon_denmark.txt --recode --out temp2; vcftools --vcf temp2.recode.vcf --012 --out  denmark_during_exons
+	sed '/^#/d' temp2.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | ../../Programs/LCLAE/filtbaboon1b 24 > genolik.exons_denmark_during.genolik
+
+
+## Immune
+vcftools --vcf joint.immune.forgenolik.vcf --keep 00_London_pre_neutral.txt --recode --out temp; vcftools --vcf temp.recode.vcf --012 --out london_pre_immune; sed '/^#/d' temp.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | /project2/lbarreiro/users/tauras/Programs/LCLAE/filtbaboon1b 65 > genolik.gwas_london_pre.genolik
+vcftools --vcf joint.immune.forgenolik.vcf --keep 00_London_post_neutral.txt --recode --out temp; vcftools --vcf temp.recode.vcf --012 --out london_post_immune; sed '/^#/d' temp.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | /project2/lbarreiro/users/tauras/Programs/LCLAE/filtbaboon1b 98 > genolik.gwas_london_post.genolik
+vcftools --vcf joint.immune.forgenolik.vcf --keep 00_London_during_neutral.txt --recode --out temp; vcftools --vcf temp.recode.vcf --012 --out london_during_immune; sed '/^#/d' temp.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | /project2/lbarreiro/users/tauras/Programs/LCLAE/filtbaboon1b 64 > genolik.gwas_london_during.genolik
+
+vcftools --vcf joint.immune.forgenolik.vcf --keep 00_Denmark_pre_neutral.txt --recode --out temp; vcftools --vcf temp.recode.vcf --012 --out denmark_pre_immune
+sed '/^#/d' temp.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | /project2/lbarreiro/users/tauras/Programs/LCLAE/filtbaboon1b 42 > genolik.gwas_denmark_pre.genolik
+
+vcftools --vcf joint.immune.forgenolik.vcf --keep 00_Denmark_post_neutral.txt --recode --out temp; vcftools --vcf temp.recode.vcf --012 --out denmark_post_immune
+sed '/^#/d' temp.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | /project2/lbarreiro/users/tauras/Programs/LCLAE/filtbaboon1b 57 > genolik.gwas_denmark_post.genolik
+
+vcftools --vcf joint.immune.forgenolik.vcf --keep 00_Denmark_during_neutral.txt --recode --out temp; vcftools --vcf temp.recode.vcf --012 --out denmark_during_immune
+sed '/^#/d' temp.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | /project2/lbarreiro/users/tauras/Programs/LCLAE/filtbaboon1b 24 > genolik.gwas_denmark_during.genolik
+
+## Immune
+vcftools --vcf joint.neutral.forgenolik.vcf --keep 00_London_pre_neutral.txt --recode --out temp; vcftools --vcf temp.recode.vcf --012 --out london_pre_neutral; sed '/^#/d' temp.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | /project2/lbarreiro/users/tauras/Programs/LCLAE/filtbaboon1b 65 > genolik.neutral_london_pre.genolik
+vcftools --vcf joint.neutral.forgenolik.vcf --keep 00_London_post_neutral.txt --recode --out temp; vcftools --vcf temp.recode.vcf --012 --out london_post_neutral; sed '/^#/d' temp.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | /project2/lbarreiro/users/tauras/Programs/LCLAE/filtbaboon1b 100 > genolik.neutral_london_post.genolik
+vcftools --vcf joint.neutral.forgenolik.vcf --keep 00_London_during_neutral.txt --recode --out temp; vcftools --vcf temp.recode.vcf --012 --out london_during_neutral; sed '/^#/d' temp.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | /project2/lbarreiro/users/tauras/Programs/LCLAE/filtbaboon1b 63 > genolik.neutral_london_during.genolik
+
+vcftools --vcf joint.neutral.forgenolik.vcf --keep 00_Denmark_pre_neutral.txt --recode --out temp; vcftools --vcf temp.recode.vcf --012 --out denmark_pre_neutral
+sed '/^#/d' temp.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | /project2/lbarreiro/users/tauras/Programs/LCLAE/filtbaboon1b 42 > genolik.neutral_denmark_pre.genolik
+
+vcftools --vcf joint.neutral.forgenolik.vcf --keep 00_Denmark_post_neutral.txt --recode --out temp; vcftools --vcf temp.recode.vcf --012 --out denmark_post_neutral
+sed '/^#/d' temp.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | /project2/lbarreiro/users/tauras/Programs/LCLAE/filtbaboon1b 57 > genolik.neutral_denmark_post.genolik
+
+vcftools --vcf joint.neutral.forgenolik.vcf --keep 00_Denmark_during_neutral.txt --recode --out temp; vcftools --vcf temp.recode.vcf --012 --out denmark_during_neutral
+sed '/^#/d' temp.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./999/g' | /project2/lbarreiro/users/tauras/Programs/LCLAE/filtbaboon1b 24 > genolik.neutral_denmark_during.genolik
+
+```
+Exons, London: pre=38, post=63, BD=41. Denmark: pre=42, post=58, BD=24 (n=264)
+Immune & Neutral, London: pre=65, post=98 & 100, BD=64 & 63. Denmark: pre=42, post=57, BD=24 (n=350 & 352)
+
+These results feed into aDNA_enrichment_analysis1.Rmd (which is stored locally)
