@@ -37,6 +37,10 @@ samtools merge tmp6.$f.tomap.bam tmp5.$f.umap_fq2.bam tmp5.$f.umap_fq.bam
 /project2/lbarreiro/users/tauras/Programs/bwa_bam2bam/network-aware-bwa-master/bwa bam2bam -g hg19/hg19.fa -l 16500 -f bams/$f.mapped.bam tmp6.$f.tomap.bam; samtools sort -o bams/$f.sort.bam bams/$f.mapped.bam; samtools index bams/$f.sort.bam; rm bams/$f.mapped.bam; samtools flagstat bams/$f.sort.bam; rm tmp*$f.*bam; rm $f.*fq; rm $f.names; rm $f.sortname.bam; done
 
 sbatch --array=1-1003%225 --mem=8G --account=pi-lbarreiro --partition=lbarreiro run.01.bwa_map.sh
+
+# time /project2/lbarreiro/users/tauras/Programs/bwa_bam2bam/network-aware-bwa-master/bwa bam2bam -g hg19/hg19.fa -n 0.01 -o 2 -l 16500 -f test.out bams/cut.LP372a_S252_L001.leehom.bam
+## Let's remove "-n" and "-o" options which cuts down the time to ~1/5
+				
 ```
 
 # Get genotype calls
