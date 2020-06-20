@@ -15,3 +15,20 @@ blat ./hg19/hg19.fa /project2/lbarreiro/users/tauras/pestis_aDNA/Exon/ExonFinal_
 /project2/lbarreiro/users/tauras/pestis_aDNA/Exon/ExonFinal_2018-0307.fasta
 /project2/lbarreiro/users/tauras/pestis_aDNA/GWAS/Immune_seqs_2016-0912.fasta
 /project2/lbarreiro/users/tauras/pestis_aDNA/Neutral/Neutral_redesigned_2016-0415.fasta
+
+
+
+
+
+## If I wanted to post-process more in R and get the gene name by the exon
+library(data.table); library(tidyverse); fread("hg19_exons.psl") -> data
+colnames(data)[1] <- "V1"
+data$rat <- data$V1/data$V11
+for (i in 1:nrow(data)) {data$chrom_match[i] <- str_detect(pattern=data$V14[i], string=data$V10[i]); print(i)}
+subset(data, data$chrom_match == T & data$rat > 0.9) -> d2
+
+dim(d2); length(unique(d2$V10)) #There's some number of multiply mapped sections, but we'll ignore those for now. There are only 6... 
+write.table(d2[,c(14, 16, 17)], "./30.regions_hg19.bed", sep="\t", quote=F, col.names=F, row.names=F) # output bed file 
+library(plyr); strsplit(data$V10, "-") -> l1; ldply(l1[][1:4]) -> l1
+l1$V3 -> data$init_chrom
+new <- NULL; for (i in 1:length(l1)) { rbind(new, data.frame(matrix(nrow=1,ncol=5,l1[[i]]))[,1:5]) -> new; print(i)}
