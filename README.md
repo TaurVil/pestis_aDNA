@@ -61,7 +61,7 @@ sbatch --array=1-22 --mem=16G run.03.merge_combine_immune.sh
 ```
 
 # Filter genotype calls for target regions
-```
+```console
 module load bcftools
 bcftools concat chr*neutral.vcf.gz -a > neutral.vcf.gz
 bcftools concat chr*exon.vcf.gz -a > exon.vcf.gz
@@ -80,7 +80,7 @@ bcftools annotate -x ^INFO/DP,^FORMAT/GT,^FORMAT/AD,^FORMAT/DP,^FORMAT/GQ,^FORMA
 ```
 
 # Get genotype likelihoods for each subset
-```
+```console
 module load vcftools
 ## Exons
 vcftools --vcf joint.exon.forgenolik.vcf --keep 05.pre_exon_london.txt --recode --out temp; vcftools --vcf temp.recode.vcf --012 --out london_pre_exons
