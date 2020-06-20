@@ -34,17 +34,9 @@ java -jar /project2/lbarreiro/users/tauras/Programs/picard.jar FastqToSam FASTQ=
 java -jar /project2/lbarreiro/users/tauras/Programs/picard.jar FastqToSam FASTQ=$f.remaining.fq OUTPUT=tmp5.$f.umap_fq2.bam READ_GROUP_NAME=$f SAMPLE_NAME=$f LIBRARY_NAME=ILL
 samtools merge tmp6.$f.tomap.bam tmp5.$f.umap_fq2.bam tmp5.$f.umap_fq.bam
 # map 
-/project2/lbarreiro/users/tauras/Programs/bwa_bam2bam/network-aware-bwa-master/bwa bam2bam -g hg19/hg19.fa -l 16500 -f bams/$f.mapped.bam tmp6.$f.tomap.bam; samtools sort -o bams/$f.sort.bam bams/$f.mapped.bam; samtools index bams/$f.sort.bam; rm bams/$f.mapped.bam; samtools flagstat bams/$f.sort.bam
-rm tmp*$f.*bam; rm $f.*fq; rm $f.names; rm $f.sortname.bam; done
-
-
-
+/project2/lbarreiro/users/tauras/Programs/bwa_bam2bam/network-aware-bwa-master/bwa bam2bam -g hg19/hg19.fa -l 16500 -f bams/$f.mapped.bam tmp6.$f.tomap.bam; samtools sort -o bams/$f.sort.bam bams/$f.mapped.bam; samtools index bams/$f.sort.bam; rm bams/$f.mapped.bam; samtools flagstat bams/$f.sort.bam; rm tmp*$f.*bam; rm $f.*fq; rm $f.names; rm $f.sortname.bam; done
 
 sbatch --array=1-1003%225 --mem=8G --account=pi-lbarreiro --partition=lbarreiro run.01.bwa_map.sh
-  for index in `seq 1 10`; do f=`head -$index 00_bam.list | tail -1`; samtools sort -n bams/$f*min24*.bam -o $f.sortname.bam; /project2/lbarreiro/users/tauras/Programs/bwa_bam2bam/network-aware-bwa-master/bwa bam2bam -g hg19/hg19.fa -l 16500 -f bams/$f.mapped.bam $f.sortname.bam; rm $f.sortname.bam; samtools sort -o bams/$f.sort.bam bams/$f.mapped.bam; samtools index bams/$f.sort.bam; rm bams/$f.mapped.bam; echo $index; done
-
-
-bedtools bamtobed -i exons/LM16_ExonFinal_2018-0307.min24.MQ30.merged.RG.bam  | cut -f 4 > $name.
 ```
 
 # Get genotype calls
