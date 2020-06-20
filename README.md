@@ -127,6 +127,7 @@ sed '/^#/d' temp.recode.vcf | cut -f 1,2,10- | sed -e 's/:/ /g' | sed -e 's/\./9
 
 ```
 Exons, London: pre=38, post=63, BD=41. Denmark: pre=42, post=58, BD=24 (n=264)
+
 Immune & Neutral, London: pre=65, post=98 & 100, BD=64 & 63. Denmark: pre=42, post=57, BD=24 (n=350 & 352)
 
 These results feed into aDNA_enrichment_analysis1.Rmd (which is stored locally)
