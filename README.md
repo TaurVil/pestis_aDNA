@@ -135,3 +135,47 @@ Exons, London: pre=38, post=63, BD=41. Denmark: pre=42, post=58, BD=24 (n=264)
 Immune & Neutral, London: pre=65, post=98 & 100, BD=64 & 63. Denmark: pre=42, post=57, BD=24 (n=350 & 352)
 
 These results feed into aDNA_enrichment_analysis1.Rmd (which is stored locally)
+
+
+```console
+# Get list of sites that are human variants
+wget ftp://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606_b151_GRCh38p7/VCF/GATK/All_20180418.vcf.gz
+vcftools --gzvcf All_20180418.vcf.gz --remove-indels --kept-sites --out dbsnp.all
+cat dbsnp.all.kept.sites | awk -v OFS='\t' '{print $1, $2, $2}' > dbsnp.all.bed
+
+# Get list of sites known to be common human variants
+wget ftp://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606_b151_GRCh38p7/VCF/GATK/common_all_20180418.vcf.gz
+vcftools --gzvcf common_all_20180418.vcf.gz --remove-indels --kept-sites --out dbsnp.common
+cat dbsnp.common.kept.sites | awk -v OFS='\t' '{print $1, $2, $2}' > dbsnp.common.bed
+
+
+## pull out the variants I called which overlap common or all variants
+module load vcftools
+vcftools --gzvcf neutral.vcf.gz --mac 3 --max-alleles 2 --bed ./neutral.bed --minQ 30 --kept-sites --out int_dbsnp.neutral 
+vcftools --gzvcf exon.vcf.gz --mac 3 --max-alleles 2 --bed ./exon.bed --minQ 30 --kept-sites --out int_dbsnp.exon 
+vcftools --gzvcf immune.vcf.gz --mac 3 --max-alleles 2 --bed ./immune.bed --minQ 30 --kept-sites --out int_dbsnp.immune
+
+cat int_dbsnp.immune.kept.sites | awk -v OFS='\t' '{print $1, $2, $2}' > int_dbsnp.immune.bed
+cat int_dbsnp.exon.kept.sites | awk -v OFS='\t' '{print $1, $2, $2}' > int_dbsnp.exon.bed
+cat int_dbsnp.neutral.kept.sites | awk -v OFS='\t' '{print $1, $2, $2}' > int_dbsnp.neutral.bed
+
+module load bedtools
+bedtools intersect -u -a int_dbsnp.immune.bed -b dbsnp.common.bed > common.immune.bed
+bedtools intersect -u -a int_dbsnp.exon.bed -b dbsnp.common.bed > common.exon.bed
+bedtools intersect -u -a int_dbsnp.neutral.bed -b dbsnp.common.bed > common.neutral.bed
+bedtools intersect -u -a int_dbsnp.immune.bed -b dbsnp.all.bed > all.immune.bed
+bedtools intersect -u -a int_dbsnp.exon.bed -b dbsnp.all.bed > all.exon.bed
+bedtools intersect -u -a int_dbsnp.neutral.bed -b dbsnp.all.bed > all.neutral.bed
+
+
+vcftools --gzvcf neutral.vcf.gz --mac 3 --max-alleles 2 --bed ./neutral.bed --minQ 30 --positions dbsnp.all.kept.sites --kept-sites --out all.neutral --recode-INFO-all
+vcftools --gzvcf exon.vcf.gz --mac 3 --max-alleles 2 --bed ./exon.bed --minQ 30 --positions dbsnp.all.kept.sites --kept-sites --out all.exon --recode-INFO-all
+vcftools --gzvcf immune.vcf.gz --mac 3 --max-alleles 2 --bed ./immune.bed --minQ 30 --positions dbsnp.all.kept.sites --kept-sites --out all.immune --recode-INFO-all
+
+
+
+module load java; module load samtools; module load python; module load htslib
+
+/project2/lbarreiro/users/tauras/Programs/gatk-4.1.4.1/gatk VariantFiltration -V refilt.immune_mac3_biallelic.recode.vcf -R hg19/hg19.fa -O refilt.immune_gatk.vcf.gz -filter-ame "FS" --filter-expression "QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0"
+
+```
