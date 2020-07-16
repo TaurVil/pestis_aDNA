@@ -163,19 +163,14 @@ module load bedtools
 bedtools intersect -u -a int_dbsnp.immune.bed -b dbsnp.common.bed > common.immune.bed
 bedtools intersect -u -a int_dbsnp.exon.bed -b dbsnp.common.bed > common.exon.bed
 bedtools intersect -u -a int_dbsnp.neutral.bed -b dbsnp.common.bed > common.neutral.bed
-bedtools intersect -u -a int_dbsnp.immune.bed -b dbsnp.all.bed > all.immune.bed
-bedtools intersect -u -a int_dbsnp.exon.bed -b dbsnp.all.bed > all.exon.bed
-bedtools intersect -u -a int_dbsnp.neutral.bed -b dbsnp.all.bed > all.neutral.bed
 
+for chr in `cat 01_chroms`; do grep -P "${chr}\t" dbsnp.all.bed > tmp.bed
+	bedtools intersect -u -a int_dbsnp.immune.bed -b tmp.bed >> all.immune.bed; 
+	bedtools intersect -u -a int_dbsnp.exon.bed -b tmp.bed >> all.exon.bed; 
+	bedtools intersect -u -a int_dbsnp.neutral.bed -b tmp.bed >> all.neutral.bed; done
 
-vcftools --gzvcf neutral.vcf.gz --mac 3 --max-alleles 2 --bed ./neutral.bed --minQ 30 --positions dbsnp.all.kept.sites --kept-sites --out all.neutral --recode-INFO-all
-vcftools --gzvcf exon.vcf.gz --mac 3 --max-alleles 2 --bed ./exon.bed --minQ 30 --positions dbsnp.all.kept.sites --kept-sites --out all.exon --recode-INFO-all
-vcftools --gzvcf immune.vcf.gz --mac 3 --max-alleles 2 --bed ./immune.bed --minQ 30 --positions dbsnp.all.kept.sites --kept-sites --out all.immune --recode-INFO-all
-
-
-
-module load java; module load samtools; module load python; module load htslib
-
+# VQSR?
+# Hard filters?
 /project2/lbarreiro/users/tauras/Programs/gatk-4.1.4.1/gatk VariantFiltration -V refilt.immune_mac3_biallelic.recode.vcf -R hg19/hg19.fa -O refilt.immune_gatk.vcf.gz -filter-ame "FS" --filter-expression "QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0"
 
 ```
