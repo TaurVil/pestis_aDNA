@@ -7,7 +7,7 @@ Analyses in this repository begin with bams mapped by Jennifer Klunk.
 
 
 # Get uniquely mapping reads
-Files were originally mapped to only the regions of the genome targetted for enrichment. This produced weird patterns of heterozygosity due to calling as genetic variants regions which would have actually mapped to another part of the genome. To correct this, we will remap to the entire genome, and then retain reads which mapped uniquely within the target region. 
+Files were originally mapped to only the regions of the genome targetted for enrichment. This produced weird patterns of heterozygosity due to calling as genetic variants regions which would have actually mapped to another part of the genome. To correct this, we remap reads to the entire genome, and then retain reads which mapped uniquely within the target region. 
 
 ```console
 # Get list of individuals and genomes
@@ -47,20 +47,17 @@ sbatch --array=1-1003%225 --mem=8G --account=pi-lbarreiro --partition=lbarreiro 
 Now we need to call genotypes for each dataset, starting with the gVCF files then assembling the combined call sets. 
 ```console
 mkdir gVCF
+## make gVCF file for each individual
 	sbatch --array=1-250%80 --mem=16G --account=pi-lbarreiro --partition=lbarreiro run.02.gVCF.sh
 	sbatch --array=501-750%100 --mem=16G run.02.gVCF.sh
   
-
 ls gVCF/*Neutral*gz > 105_neutral_cohortmap; awk 'BEGIN { FS="/t"; OFS="/t" } { print $1 $1}'  105_neutral_cohortmap > tmp4 ; sed 's/gzgVCF/gz \t gVCF/g' tmp4 > tmp2; sed 's/ gVCF/gVCF/g' tmp2 > 105_neutral_cohortmap; sed -i 's/^gVCF\///g' 105_neutral_cohortmap; sed -i 's/.g.vcf.gz //g' 105_neutral_cohortmap; rm tmp2; rm tmp4
 ls gVCF/*Immune*gz > 105_immune_cohortmap; awk 'BEGIN { FS="/t"; OFS="/t" } { print $1 $1}'  105_immune_cohortmap > tmp4 ; sed 's/gzgVCF/gz \t gVCF/g' tmp4 > tmp2; sed 's/ gVCF/gVCF/g' tmp2 > 105_immune_cohortmap; sed -i 's/^gVCF\///g' 105_immune_cohortmap; sed -i 's/.g.vcf.gz //g' 105_immune_cohortmap; rm tmp2; rm tmp4
 ls gVCF/*Exon*gz > 105_exon_cohortmap; awk 'BEGIN { FS="/t"; OFS="/t" } { print $1 $1}'  105_exon_cohortmap > tmp4 ; sed 's/gzgVCF/gz \t gVCF/g' tmp4 > tmp2; sed 's/ gVCF/gVCF/g' tmp2 > 105_exon_cohortmap; sed -i 's/^gVCF\///g' 105_exon_cohortmap; sed -i 's/.g.vcf.gz //g' 105_exon_cohortmap; rm tmp2; rm tmp4
 
-ls gVCF/*Exon*gz > 01_exon_gvcf.list
-sbatch --array=1-22 --mem=16G --account=pi-lbarreiro --partition=lbarreiro run.03.merge_combine_exon.sh
-ls gVCF/*Neutral*gz > 01_neutral_gvcf.list
-sbatch --array=1-22 --mem=16G run.03.merge_combine_neutral.sh
-ls gVCF/*Immune*gz > 01_immune_gvcf.list
-sbatch --array=1-22 --mem=16G run.03.merge_combine_immune.sh
+ls gVCF/*Exon*gz > 01_exon_gvcf.list; sbatch --array=1-22 --mem=16G --account=pi-lbarreiro --partition=lbarreiro run.03.merge_combine_exon.sh
+ls gVCF/*Neutral*gz > 01_neutral_gvcf.list; sbatch --array=1-22 --mem=16G run.03.merge_combine_neutral.sh
+ls gVCF/*Immune*gz > 01_immune_gvcf.list; sbatch --array=1-22 --mem=16G run.03.merge_combine_immune.sh
 
 ```
 
